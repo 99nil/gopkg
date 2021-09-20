@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/99nil/go/cycle"
 	"github.com/99nil/go/sets"
 )
@@ -178,6 +180,7 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 		wait := make([]*Instance, 0, len(pending))
 
 		errCh := make(chan error)
+		eg, ctx := errgroup.WithContext(ctx)
 		for _, c := range pending {
 			if doneSet.Has(c.name) {
 				continue
@@ -190,13 +193,20 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 				}
 			}
 
-			go func(c *Instance) {
-				if err := c.Run(ctx); err != nil {
-					errCh <- err
-				}
+			func(c *Instance) {
+				eg.Go(func() error {
+					err := c.Run(ctx)
+					if err != nil {
+						errCh <- err
+					}
+					return err
+				})
 			}(c)
 			doneSet.Add(c.name)
 		}
+		go func() {
+			errCh <- eg.Wait()
+		}()
 		if err := <-errCh; err != nil {
 			return err
 		}
