@@ -121,6 +121,7 @@ func (ins *Instance) Run(ctx context.Context) error {
 	}
 	// TODO Check for non-existent dependencies.
 
+	ctx = contextWithName(ctx, ins.name)
 	if ins.pre != nil {
 		if err := ins.pre(ctx); err != nil {
 			return err
