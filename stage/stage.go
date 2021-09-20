@@ -179,7 +179,6 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 	for len(pending) > 0 {
 		wait := make([]*Instance, 0, len(pending))
 
-		errCh := make(chan error)
 		eg, ctx := errgroup.WithContext(ctx)
 		for _, c := range pending {
 			if doneSet.Has(c.name) {
@@ -195,19 +194,15 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 
 			func(c *Instance) {
 				eg.Go(func() error {
-					err := c.Run(ctx)
-					if err != nil {
-						errCh <- err
-					}
-					return err
+					return c.Run(ctx)
 				})
 			}(c)
 			doneSet.Add(c.name)
 		}
-		go func() {
-			errCh <- eg.Wait()
-		}()
-		if err := <-errCh; err != nil {
+
+		// Parallel processing needs to wait for all processes to end.
+		// If you want to control, please use the `Done` method of `context.Context`.
+		if err := eg.Wait(); err != nil {
 			return err
 		}
 		pending = wait[:]
