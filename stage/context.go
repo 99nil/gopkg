@@ -18,10 +18,16 @@ package stage
 
 import "context"
 
-type key int
+type contextKey struct {
+	name string
+}
 
-const (
-	NameKey = iota
+func (c *contextKey) String() string {
+	return "context value " + c.name
+}
+
+var (
+	NameKey = &contextKey{name: "name"}
 )
 
 func contextWithName(parent context.Context, name string) context.Context {

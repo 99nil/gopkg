@@ -21,11 +21,9 @@ import (
 	"errors"
 	"fmt"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/99nil/go/cycle"
-
 	"github.com/99nil/go/sets"
+	"golang.org/x/sync/errgroup"
 )
 
 type InstanceFunc func(ctx context.Context) error
@@ -61,9 +59,9 @@ func (ins *Instance) rename() {
 }
 
 // Add adds subsets
-func (ins *Instance) Add(cs ...Instance) *Instance {
+func (ins *Instance) Add(cs ...*Instance) *Instance {
 	for _, c := range cs {
-		ins.cs = append(ins.cs, &c)
+		ins.cs = append(ins.cs, c)
 	}
 	return ins
 }
@@ -192,9 +190,12 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 					continue
 				}
 			}
-			eg.Go(func() error {
-				return c.Run(ctx)
-			})
+
+			func(c *Instance) {
+				eg.Go(func() error {
+					return c.Run(ctx)
+				})
+			}(c)
 			doneSet.Add(c.name)
 		}
 		if err := eg.Wait(); err != nil {
