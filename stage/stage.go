@@ -61,9 +61,9 @@ func (ins *Instance) rename() {
 }
 
 // Add adds subsets
-func (ins *Instance) Add(cs ...*Instance) *Instance {
+func (ins *Instance) Add(cs ...Instance) *Instance {
 	for _, c := range cs {
-		ins.cs = append(ins.cs, c)
+		ins.cs = append(ins.cs, &c)
 	}
 	return ins
 }
