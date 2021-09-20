@@ -115,7 +115,7 @@ func (ins *Instance) hasLoop() bool {
 	return graph.DetectCycles()
 }
 
-func (ins *Instance) run(ctx context.Context) error {
+func (ins *Instance) Run(ctx context.Context) error {
 	if ins.hasLoop() {
 		return errors.New("dependency cycle detected")
 	}
@@ -162,7 +162,7 @@ func (ins *Instance) runSync(ctx context.Context) error {
 					continue
 				}
 			}
-			if err := c.run(ctx); err != nil {
+			if err := c.Run(ctx); err != nil {
 				return err
 			}
 			doneSet.Add(c.name)
@@ -192,7 +192,7 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 				}
 			}
 			eg.Go(func() error {
-				return c.run(ctx)
+				return c.Run(ctx)
 			})
 			doneSet.Add(c.name)
 		}
