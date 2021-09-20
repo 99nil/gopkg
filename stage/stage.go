@@ -23,7 +23,6 @@ import (
 
 	"github.com/99nil/go/cycle"
 	"github.com/99nil/go/sets"
-	"golang.org/x/sync/errgroup"
 )
 
 type InstanceFunc func(ctx context.Context) error
@@ -178,7 +177,7 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 	for len(pending) > 0 {
 		wait := make([]*Instance, 0, len(pending))
 
-		eg, ctx := errgroup.WithContext(ctx)
+		errCh := make(chan error)
 		for _, c := range pending {
 			if doneSet.Has(c.name) {
 				continue
@@ -191,17 +190,16 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 				}
 			}
 
-			func(c *Instance) {
-				eg.Go(func() error {
-					return c.Run(ctx)
-				})
+			go func(c *Instance) {
+				if err := c.Run(ctx); err != nil {
+					errCh <- err
+				}
 			}(c)
 			doneSet.Add(c.name)
 		}
-		if err := eg.Wait(); err != nil {
+		if err := <-errCh; err != nil {
 			return err
 		}
-
 		pending = wait[:]
 	}
 	return nil
