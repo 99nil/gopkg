@@ -27,7 +27,7 @@ import (
 	"github.com/99nil/go/sets"
 )
 
-type InstanceFunc func(ctx context.Context) error
+type InstanceFunc func(c Context) error
 
 type Instance struct {
 	name string
@@ -119,33 +119,37 @@ func (ins *Instance) Run(ctx context.Context) error {
 		return errors.New("dependency cycle detected")
 	}
 	// TODO Check for non-existent dependencies.
+	sc := NewCtx(ctx)
+	sc.WithValue(NameKey, ins.name)
+	return ins.run(sc)
+}
 
-	ctx = contextWithName(ctx, ins.name)
+func (ins *Instance) run(sc Context) error {
 	if ins.pre != nil {
-		if err := ins.pre(ctx); err != nil {
+		if err := ins.pre(sc); err != nil {
 			return err
 		}
 	}
 
 	var err error
 	if ins.async {
-		err = ins.runAsync(ctx)
+		err = ins.runAsync(sc)
 	} else {
-		err = ins.runSync(ctx)
+		err = ins.runSync(sc)
 	}
 	if err != nil {
 		return err
 	}
 
 	if ins.sub != nil {
-		if err := ins.sub(ctx); err != nil {
+		if err := ins.sub(sc); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ins *Instance) runSync(ctx context.Context) error {
+func (ins *Instance) runSync(sc Context) error {
 	doneSet := sets.NewString()
 	pending := ins.cs[:]
 	for len(pending) > 0 {
@@ -162,7 +166,7 @@ func (ins *Instance) runSync(ctx context.Context) error {
 					continue
 				}
 			}
-			if err := c.Run(ctx); err != nil {
+			if err := c.run(sc); err != nil {
 				return err
 			}
 			doneSet.Add(c.name)
@@ -173,13 +177,17 @@ func (ins *Instance) runSync(ctx context.Context) error {
 	return nil
 }
 
-func (ins *Instance) runAsync(ctx context.Context) error {
+func (ins *Instance) runAsync(sc Context) error {
 	doneSet := sets.NewString()
 	pending := ins.cs[:]
 	for len(pending) > 0 {
 		wait := make([]*Instance, 0, len(pending))
 
-		eg, ctx := errgroup.WithContext(ctx)
+		ctx := sc.Ctx()
+		eg, cancelCtx := errgroup.WithContext(ctx)
+		sc.WithCtx(cancelCtx)
+
+		scCopySet := make([]Context, 0, len(pending))
 		for _, c := range pending {
 			if doneSet.Has(c.name) {
 				continue
@@ -192,19 +200,27 @@ func (ins *Instance) runAsync(ctx context.Context) error {
 				}
 			}
 
+			scCopy := sc.(*valueCtx).clone()
 			func(c *Instance) {
 				eg.Go(func() error {
-					return c.Run(ctx)
+					return c.run(scCopy)
 				})
 			}(c)
 			doneSet.Add(c.name)
+			scCopySet = append(scCopySet, scCopy)
 		}
 
 		// Parallel processing needs to wait for all processes to end.
-		// If you want to control, please use the `Done` method of `context.Context`.
+		// If you want to control, please use the `Done` method of `Context`.
 		if err := eg.Wait(); err != nil {
 			return err
 		}
+
+		// Combine the context of two processes.
+		for _, scCopy := range scCopySet {
+			sc.(*valueCtx).combine(scCopy)
+		}
+		sc.WithCtx(ctx)
 		pending = wait[:]
 	}
 	return nil

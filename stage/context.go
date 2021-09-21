@@ -16,7 +16,67 @@
 
 package stage
 
-import "context"
+import (
+	"context"
+	"sync"
+)
+
+type Context interface {
+	context.Context
+	Ctx() context.Context
+	WithCtx(ctx context.Context)
+	WithValue(key, value interface{})
+}
+
+type valueCtx struct {
+	context.Context
+	set sync.Map
+}
+
+func NewCtx(ctx context.Context) Context {
+	if ctx == nil {
+		panic("cannot create stage context from nil context")
+	}
+	return &valueCtx{Context: ctx}
+}
+
+func (c *valueCtx) Ctx() context.Context {
+	return c.Context
+}
+
+func (c *valueCtx) WithCtx(ctx context.Context) {
+	c.Context = ctx
+}
+
+func (c *valueCtx) clone() Context {
+	vc := &valueCtx{Context: c.Context}
+	c.set.Range(func(key, value interface{}) bool {
+		vc.set.Store(key, value)
+		return true
+	})
+	return vc
+}
+
+func (c *valueCtx) combine(c2 Context) {
+	if vc, ok := c2.(*valueCtx); ok {
+		vc.set.Range(func(key, value interface{}) bool {
+			c.set.Store(key, value)
+			return true
+		})
+	}
+}
+
+func (c *valueCtx) WithValue(key, value interface{}) {
+	c.set.Store(key, value)
+}
+
+func (c *valueCtx) Value(key interface{}) interface{} {
+	value, ok := c.set.Load(key)
+	if ok {
+		return value
+	}
+	return c.Context.Value(key)
+}
 
 type contextKey struct {
 	name string
@@ -30,10 +90,6 @@ var (
 	NameKey = &contextKey{name: "name"}
 )
 
-func contextWithName(parent context.Context, name string) context.Context {
-	return context.WithValue(parent, NameKey, name)
-}
-
-func ContextName(ctx context.Context) string {
+func ContextName(ctx Context) string {
 	return ctx.Value(NameKey).(string)
 }
