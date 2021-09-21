@@ -120,12 +120,12 @@ func (ins *Instance) Run(ctx context.Context) error {
 	}
 	// TODO Check for non-existent dependencies.
 	sc := NewCtx(ctx)
-	sc.WithValue(NameKey, ins.name)
 	return ins.run(sc)
 }
 
 func (ins *Instance) run(sc Context) error {
 	if ins.pre != nil {
+		sc.WithValue(NameKey, ins.name)
 		if err := ins.pre(sc); err != nil {
 			return err
 		}
@@ -142,6 +142,7 @@ func (ins *Instance) run(sc Context) error {
 	}
 
 	if ins.sub != nil {
+		sc.WithValue(NameKey, ins.name)
 		if err := ins.sub(sc); err != nil {
 			return err
 		}
