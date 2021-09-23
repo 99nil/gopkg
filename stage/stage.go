@@ -59,6 +59,10 @@ func (ins *Instance) rename() {
 	}
 }
 
+func (ins *Instance) Len() int {
+	return len(ins.cs)
+}
+
 // Add adds subsets
 func (ins *Instance) Add(cs ...*Instance) *Instance {
 	for _, c := range cs {
