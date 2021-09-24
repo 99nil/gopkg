@@ -41,6 +41,9 @@ type Instance struct {
 	sub InstanceFunc
 	// The names of other stages that need to be relied upon before execution.
 	relies []string
+	// After executing the current stage, the name of the next stage that needs to be executed.
+	// Note: other stages between the current stage and the next stage will not be executed.
+	next string
 }
 
 func New(name string) *Instance {
@@ -96,6 +99,13 @@ func (ins *Instance) SetRely(names ...string) *Instance {
 	return ins
 }
 
+// Goto sets the name of the next stage to be executed.
+// Note: will be invalid in asynchronous stage.
+func (ins *Instance) Goto(name string) *Instance {
+	ins.next = name
+	return ins
+}
+
 // getChildNames gets the names of all subsets.
 func (ins *Instance) getChildNames() []string {
 	csLen := len(ins.cs)
@@ -128,14 +138,19 @@ func (ins *Instance) Run(ctx context.Context) error {
 }
 
 func (ins *Instance) run(sc Context) error {
+	var err error
 	if ins.pre != nil {
 		sc.WithValue(NameKey, ins.name)
-		if err := ins.pre(sc); err != nil {
+		err = ins.pre(sc)
+		// If the exception is ErrStageSkip, skip the execution stage.
+		if err == ErrStageSkip {
+			return nil
+		}
+		if err != nil {
 			return err
 		}
 	}
 
-	var err error
 	if ins.async {
 		err = ins.runAsync(sc)
 	} else {
@@ -154,14 +169,21 @@ func (ins *Instance) run(sc Context) error {
 	return nil
 }
 
+// runSync runs synchronous execution of the stage subset.
 func (ins *Instance) runSync(sc Context) error {
 	doneSet := sets.NewString()
 	pending := ins.cs[:]
 	for len(pending) > 0 {
+		var next string
 		wait := make([]*Instance, 0, len(pending))
 
 		for _, c := range pending {
 			if doneSet.Has(c.name) {
+				continue
+			}
+
+			if next != "" && c.name != next {
+				doneSet.Add(c.name)
 				continue
 			}
 			if len(c.relies) != 0 {
@@ -175,6 +197,7 @@ func (ins *Instance) runSync(sc Context) error {
 				return err
 			}
 			doneSet.Add(c.name)
+			next = c.next
 		}
 
 		pending = wait[:]
@@ -182,6 +205,7 @@ func (ins *Instance) runSync(sc Context) error {
 	return nil
 }
 
+// runAsync runs asynchronous execution of the stage subset.
 func (ins *Instance) runAsync(sc Context) error {
 	doneSet := sets.NewString()
 	pending := ins.cs[:]
