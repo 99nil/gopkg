@@ -1,5 +1,3 @@
-// Package stage
-
 // Copyright © 2021 zc2638 <zc2638@qq.com>.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stage
+package database
 
-type Error string
+import (
+	"net/http"
+	"strconv"
 
-func (e Error) Error() string {
-	return string(e)
+	"gorm.io/gorm"
+)
+
+func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
+	page, _ := strconv.Atoi(
+		r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(
+		r.URL.Query().Get("size"))
+	return PaginateDirect(page, size)
 }
 
-const ErrStageSkip = Error("stage skip")
+func PaginateDirect(page int, size int) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if page < 1 {
+			page = 1
+		}
+		switch {
+		case size > 100:
+			size = 100
+		case size < 1:
+			size = 10
+		}
+		return db.Offset((page - 1) * size).Limit(size)
+	}
+}
