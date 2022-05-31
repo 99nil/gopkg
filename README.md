@@ -1,2 +1,2 @@
-# go
-Some encapsulation implementations of `golang`
+# gopkg
+Some encapsulation implementations of `Golang`

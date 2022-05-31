@@ -1,4 +1,4 @@
-module github.com/99nil/go
+module github.com/99nil/gopkg
 
 go 1.17
 

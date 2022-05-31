@@ -15,7 +15,7 @@
 package ctr
 
 import (
-	"github.com/99nil/go/logger"
+	"github.com/99nil/gopkg/logger"
 )
 
 // logInstance defines the log processing method
