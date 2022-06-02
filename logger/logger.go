@@ -79,7 +79,7 @@ type DebugInterface interface {
 }
 
 func NewEmpty() Interface {
-	return &empty{}
+	return NewEmptyWithStd(NewStdEmpty())
 }
 
 func NewEmptyWithStd(std StdInterface) Interface {
