@@ -14,6 +14,7 @@
 
 package logger
 
+// Interface defines a full log interface
 type Interface interface {
 	InfoInterface
 	WarnInterface
@@ -23,11 +24,28 @@ type Interface interface {
 	DebugInterface
 }
 
+// FieldInterface defines a full log with field interface
+type FieldInterface interface {
+	Interface
+
+	WithField(key string, val interface{}) FieldInterface
+	WithFields(fields map[string]interface{}) FieldInterface
+}
+
+// UniversalInterface defines a generic log interface
 type UniversalInterface interface {
 	InfoInterface
 	WarnInterface
 	ErrorInterface
 	DebugInterface
+}
+
+// UniversalFieldInterface defines a generic log with field interface
+type UniversalFieldInterface interface {
+	UniversalInterface
+
+	WithField(key string, val interface{}) UniversalFieldInterface
+	WithFields(fields map[string]interface{}) UniversalFieldInterface
 }
 
 type StdInterface interface {
