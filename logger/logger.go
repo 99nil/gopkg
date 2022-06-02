@@ -22,22 +22,36 @@ type Interface interface {
 	PanicInterface
 	DebugInterface
 }
-type StdInterface interface {
+
+type UniversalInterface interface {
 	InfoInterface
+	WarnInterface
+	ErrorInterface
+	DebugInterface
+}
+
+type StdInterface interface {
+	PrintInterface
 	FatalInterface
 	PanicInterface
 }
 
-type InfoInterface interface {
+type PrintInterface interface {
 	Print(v ...interface{})
 	Printf(format string, v ...interface{})
 	Println(v ...interface{})
 }
 
+type InfoInterface interface {
+	Info(v ...interface{})
+	Infof(format string, v ...interface{})
+	Infoln(v ...interface{})
+}
+
 type WarnInterface interface {
-	Warning(v ...interface{})
-	Warningf(format string, v ...interface{})
-	Warningln(v ...interface{})
+	Warn(v ...interface{})
+	Warnf(format string, v ...interface{})
+	Warnln(v ...interface{})
 }
 
 type ErrorInterface interface {
@@ -76,9 +90,9 @@ type empty struct {
 	std StdInterface
 }
 
-func (l *empty) Print(v ...interface{})                 { l.std.Print(v...) }
-func (l *empty) Printf(format string, v ...interface{}) { l.std.Printf(format, v...) }
-func (l *empty) Println(v ...interface{})               { l.std.Println(v...) }
+func (l *empty) Info(v ...interface{})                 { l.std.Print(v...) }
+func (l *empty) Infof(format string, v ...interface{}) { l.std.Printf(format, v...) }
+func (l *empty) Infoln(v ...interface{})               { l.std.Println(v...) }
 
 func (l *empty) Fatal(v ...interface{})                 { l.std.Fatal(v...) }
 func (l *empty) Fatalf(format string, v ...interface{}) { l.std.Fatalf(format, v...) }
@@ -88,9 +102,9 @@ func (l *empty) Panic(v ...interface{})                 { l.std.Panic(v...) }
 func (l *empty) Panicf(format string, v ...interface{}) { l.std.Panicf(format, v...) }
 func (l *empty) Panicln(v ...interface{})               { l.std.Panicln(v...) }
 
-func (l *empty) Warning(v ...interface{})                 {}
-func (l *empty) Warningf(format string, v ...interface{}) {}
-func (l *empty) Warningln(v ...interface{})               {}
+func (l *empty) Warn(v ...interface{})                 {}
+func (l *empty) Warnf(format string, v ...interface{}) {}
+func (l *empty) Warnln(v ...interface{})               {}
 
 func (l *empty) Error(v ...interface{})                 {}
 func (l *empty) Errorf(format string, v ...interface{}) {}
