@@ -63,27 +63,26 @@ func NewHTTP2(cfg *Config, conf *http2.Server) (*Server, error) {
 }
 
 func (s *Server) Run(ctx context.Context) error {
-	go s.ShutdownGraceful(ctx)
 	return s.ListenAndServe()
 }
 
 func (s *Server) RunTLS(ctx context.Context) error {
-	go s.ShutdownGraceful(ctx)
 	return s.ListenAndServeTLS("", "")
 }
 
-func (s *Server) ShutdownGraceful(ctx context.Context) {
+func (s *Server) ShutdownGraceful(ctx context.Context) error {
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 
 	select {
 	case <-ctx.Done():
 	case <-ch:
-		fmt.Println("Server shutdown.")
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := s.Shutdown(ctx); err != nil {
-			fmt.Println("Server shutdown failed: ", err)
-		}
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := s.Shutdown(ctx); err != nil {
+		return fmt.Errorf("server shutdown failed: %v", err)
+	}
+	return nil
 }
