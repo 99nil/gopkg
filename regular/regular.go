@@ -22,8 +22,22 @@ import (
 	"github.com/99nil/gopkg/logger"
 )
 
+type TaskFunc func(context.Context) error
+
 type TaskInterface interface {
 	Run(ctx context.Context) error
+}
+
+type task struct {
+	f TaskFunc
+}
+
+func (t *task) Run(ctx context.Context) error {
+	return t.f(ctx)
+}
+
+func NewTask(f TaskFunc) TaskInterface {
+	return &task{f: f}
 }
 
 func New(cfg *Config, log logger.UniversalInterface) (*Engine, error) {
