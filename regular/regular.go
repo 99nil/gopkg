@@ -38,24 +38,15 @@ func New(cfg *Config) (*Engine, error) {
 }
 
 func NewWithLogger(cfg *Config, log logger.UniversalInterface) (*Engine, error) {
-	for k, v := range cfg.Periods {
-		start, err := time.Parse("15:04", v.Start)
-		if err != nil {
-			return nil, fmt.Errorf("analysis time period %d start_time(%s) failed: %v", k, v.Start, err)
-		}
-		end, err := time.Parse("15:04", v.End)
-		if err != nil {
-			return nil, fmt.Errorf("analysis time period %d end_time(%s) failed: %v", k, v.Start, err)
-		}
-		cfg.Periods[k].startHour = start.Hour()
-		cfg.Periods[k].startMinute = start.Minute()
-		cfg.Periods[k].endHour = end.Hour()
-		cfg.Periods[k].endMinute = end.Minute()
+	e := &Engine{}
+	if err := e.SetConfig(cfg); err != nil {
+		return nil, err
 	}
 	if log == nil {
 		log = logger.NewEmpty()
 	}
-	return &Engine{cfg: cfg, log: log}, nil
+	e.log = log
+	return e, nil
 }
 
 type Engine struct {
@@ -65,14 +56,20 @@ type Engine struct {
 	cancel context.CancelFunc
 }
 
-func (e *Engine) SetConfig(cfg *Config) {
+func (e *Engine) SetConfig(cfg *Config) error {
 	if cfg == nil {
-		return
+		return nil
+	}
+	for k, v := range cfg.Periods {
+		if err := v.Parse(); err != nil {
+			return fmt.Errorf("analysis time period %d failed: %v", k, err)
+		}
 	}
 
 	e.m.Lock()
 	defer e.m.Unlock()
 	e.cfg = cfg
+	return nil
 }
 
 func (e *Engine) GetConfig() *Config {

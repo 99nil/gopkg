@@ -14,6 +14,8 @@
 
 package regular
 
+import "time"
+
 var (
 	AllDay = Period{Start: "00:00", End: "23:59"}
 	NoDay  = Period{Start: "00:00", End: "00:00"}
@@ -33,4 +35,20 @@ type Period struct {
 	startMinute int
 	endHour     int
 	endMinute   int
+}
+
+func (p *Period) Parse() error {
+	start, err := time.Parse("15:04", p.Start)
+	if err != nil {
+		return err
+	}
+	end, err := time.Parse("15:04", p.End)
+	if err != nil {
+		return err
+	}
+	p.startHour = start.Hour()
+	p.startMinute = start.Minute()
+	p.endHour = end.Hour()
+	p.endMinute = end.Minute()
+	return nil
 }
