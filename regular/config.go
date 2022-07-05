@@ -14,6 +14,11 @@
 
 package regular
 
+var (
+	AllDay = Period{Start: "00:00", End: "23:59"}
+	NoDay  = Period{Start: "00:00", End: "00:00"}
+)
+
 type Config struct {
 	SuccessInterval int      `json:"success_interval"` // 执行成功 再次执行的间隔时间(ms), -1为停止继续执行
 	FailInterval    int      `json:"fail_interval"`    // 执行失败 再次执行的间隔时间(ms), -1为停止继续执行
