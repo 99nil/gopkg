@@ -17,6 +17,7 @@ package regular
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/99nil/gopkg/logger"
@@ -32,7 +33,11 @@ type TaskInterface interface {
 	Run(ctx context.Context) error
 }
 
-func New(cfg *Config, log logger.UniversalInterface) (*Engine, error) {
+func New(cfg *Config) (*Engine, error) {
+	return NewWithLogger(cfg, nil)
+}
+
+func NewWithLogger(cfg *Config, log logger.UniversalInterface) (*Engine, error) {
 	for k, v := range cfg.Periods {
 		start, err := time.Parse("15:04", v.Start)
 		if err != nil {
@@ -54,9 +59,26 @@ func New(cfg *Config, log logger.UniversalInterface) (*Engine, error) {
 }
 
 type Engine struct {
+	m      sync.Mutex
 	cfg    *Config
 	log    logger.UniversalInterface
 	cancel context.CancelFunc
+}
+
+func (e *Engine) SetConfig(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+
+	e.m.Lock()
+	defer e.m.Unlock()
+	e.cfg = cfg
+}
+
+func (e *Engine) GetConfig() *Config {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.cfg
 }
 
 func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
@@ -70,7 +92,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 		time.Sleep(time.Duration(sleepInterval) * time.Second)
 	}
 
-	if len(e.cfg.Periods) == 0 {
+	if len(e.GetConfig().Periods) == 0 {
 		return e.run(ctx, task)
 	}
 
@@ -84,7 +106,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 		hour := now.Hour()
 		minute := now.Minute()
 
-		for _, v := range e.cfg.Periods {
+		for _, v := range e.GetConfig().Periods {
 			if currentStartHour > -1 && (currentStartHour != v.startHour || currentStartMinute != v.startMinute) {
 				continue
 			}
@@ -126,6 +148,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 }
 
 func (e *Engine) run(ctx context.Context, task TaskInterface) error {
+	cfg := e.GetConfig()
 	for {
 		select {
 		case <-ctx.Done():
@@ -134,20 +157,21 @@ func (e *Engine) run(ctx context.Context, task TaskInterface) error {
 		}
 
 		if err := task.Run(ctx); err != nil {
-			if e.cfg.FailInterval < 0 {
+			if cfg.FailInterval < 0 {
 				return err
 			}
 			e.log.Errorf("Execution ends with error: %v", err)
-			e.log.Warnf("Will continue after %dms", e.cfg.FailInterval)
+			e.log.Warnf("Will continue after %dms", cfg.FailInterval)
 			fmt.Println()
-			time.Sleep(time.Duration(e.cfg.FailInterval) * time.Millisecond)
+			time.Sleep(time.Duration(cfg.FailInterval) * time.Millisecond)
 			continue
 		}
+		cfg = e.GetConfig()
 
-		if e.cfg.SuccessInterval < 0 {
+		if cfg.SuccessInterval < 0 {
 			return nil
 		}
-		e.log.Infof("Executed successfully, will continue after %dms", e.cfg.SuccessInterval)
-		time.Sleep(time.Duration(e.cfg.SuccessInterval) * time.Millisecond)
+		e.log.Infof("Executed successfully, will continue after %dms", cfg.SuccessInterval)
+		time.Sleep(time.Duration(cfg.SuccessInterval) * time.Millisecond)
 	}
 }
