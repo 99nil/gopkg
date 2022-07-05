@@ -50,10 +50,13 @@ func NewWithLogger(cfg *Config, log logger.UniversalInterface) (*Engine, error) 
 }
 
 type Engine struct {
-	m      sync.Mutex
-	cfg    *Config
-	log    logger.UniversalInterface
+	m sync.Mutex
+
+	cfg *Config
+	log logger.UniversalInterface
+
 	cancel context.CancelFunc
+	stopCh chan struct{}
 }
 
 func (e *Engine) SetConfig(cfg *Config) error {
@@ -78,7 +81,13 @@ func (e *Engine) GetConfig() *Config {
 	return e.cfg
 }
 
+func (e *Engine) Shutdown() {
+	close(e.stopCh)
+}
+
 func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
+	e.stopCh = make(chan struct{})
+
 	for {
 		second := time.Now().Second()
 		if second == 0 {
@@ -140,7 +149,16 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 				e.cancel = nil
 			}
 		}
-		<-ticker.C
+
+		select {
+		case <-e.stopCh:
+			if e.cancel != nil {
+				e.cancel()
+			}
+			e.log.Info("task stopped")
+			return nil
+		case <-ticker.C:
+		}
 	}
 }
 
