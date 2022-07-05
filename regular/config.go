@@ -22,9 +22,9 @@ var (
 )
 
 type Config struct {
-	SuccessInterval int      `json:"success_interval"` // 执行成功 再次执行的间隔时间(ms), -1为停止继续执行
-	FailInterval    int      `json:"fail_interval"`    // 执行失败 再次执行的间隔时间(ms), -1为停止继续执行
-	Periods         []Period `json:"periods"`          // 执行周期
+	SuccessInterval int       `json:"success_interval"` // 执行成功 再次执行的间隔时间(ms), -1为停止继续执行
+	FailInterval    int       `json:"fail_interval"`    // 执行失败 再次执行的间隔时间(ms), -1为停止继续执行
+	Periods         []*Period `json:"periods"`          // 执行周期
 }
 
 type Period struct {
