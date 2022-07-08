@@ -21,15 +21,32 @@ var (
 	NoDay  = Period{Start: "00:00", End: "00:00"}
 )
 
+func NewDefaultConfig() *Config {
+	return &Config{
+		SuccessInterval: -1,
+		FailInterval:    -1,
+	}
+}
+
 type Config struct {
-	SuccessInterval int       `json:"success_interval"` // 执行成功 再次执行的间隔时间(ms), -1为停止继续执行
-	FailInterval    int       `json:"fail_interval"`    // 执行失败 再次执行的间隔时间(ms), -1为停止继续执行
-	Periods         []*Period `json:"periods"`          // 执行周期
+	// SuccessInterval defines successful execution interval time (ms) for re-execution,
+	// -1 is to stop execution.
+	SuccessInterval int `json:"success_interval"`
+
+	// FailInterval defines failure execution interval time (ms) for re-execution,
+	// -1 is to stop execution.
+	FailInterval int `json:"fail_interval"`
+
+	// Periods defines the execution cycle
+	Periods []*Period `json:"periods"`
 }
 
 type Period struct {
-	Start string `json:"start"` // 开始时间, 00:00
-	End   string `json:"end"`   // 结束时间, 23:59
+	// Start defines the start time (e.g. 00:00)
+	Start string `json:"start"`
+
+	// End defines the end time (e.g. 23:59)
+	End string `json:"end"`
 
 	startHour   int
 	startMinute int
