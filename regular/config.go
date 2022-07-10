@@ -29,6 +29,7 @@ func NewDefaultConfig() *Config {
 }
 
 type Config struct {
+	Name string `json:"name"`
 	// SuccessInterval defines successful execution interval time (ms) for re-execution,
 	// -1 is to stop execution.
 	SuccessInterval int `json:"success_interval"`

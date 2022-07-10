@@ -68,6 +68,9 @@ func (e *Engine) SetConfig(cfg *Config) error {
 			return fmt.Errorf("analysis time period %d failed: %v", k, err)
 		}
 	}
+	if cfg.Name == "" {
+		cfg.Name = "regular"
+	}
 
 	e.m.Lock()
 	defer e.m.Unlock()
@@ -94,7 +97,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 			break
 		}
 		sleepInterval := 60 - second
-		e.log.Warnf("The current seconds is not 0, need to wait for %ds to start the automatic assistant", sleepInterval)
+		e.log.Warnf("[%s] The current seconds is not 0, need to wait for %ds to start the automatic assistant", e.cfg.Name, sleepInterval)
 		time.Sleep(time.Duration(sleepInterval) * time.Second)
 	}
 
@@ -106,7 +109,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 	ticker := time.NewTicker(time.Minute)
 	for {
 		if e.cancel == nil {
-			e.log.Info("Start mission reconnaissance")
+			e.log.Infof("[%s] Start mission reconnaissance", e.cfg.Name)
 		}
 		now := time.Now()
 		hour := now.Hour()
@@ -138,9 +141,9 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 				ctx, e.cancel = context.WithCancel(ctx)
 				go func() {
 					if err := e.run(ctx, task); err != nil {
-						e.log.Errorf("Execution ends with error: %v", err)
+						e.log.Errorf("[%s] Execution ends with error: %v", e.cfg.Name, err)
 					}
-					e.log.Info("The execution of the current time period is over, please wait for the next time period")
+					e.log.Info("[%s] The execution of the current time period is over, please wait for the next time period", e.cfg.Name)
 				}()
 				break
 			}
@@ -155,7 +158,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 			if e.cancel != nil {
 				e.cancel()
 			}
-			e.log.Info("task stopped")
+			e.log.Info("[%s] task stopped", e.cfg.Name)
 			return nil
 		case <-ticker.C:
 		}
@@ -175,8 +178,8 @@ func (e *Engine) run(ctx context.Context, task TaskInterface) error {
 			if cfg.FailInterval < 0 {
 				return err
 			}
-			e.log.Errorf("Execution ends with error: %v", err)
-			e.log.Warnf("Will continue after %dms", cfg.FailInterval)
+			e.log.Errorf("[%s] Execution ends with error: %v", e.cfg.Name, err)
+			e.log.Warnf("[%s] Will continue after %dms", e.cfg.Name, cfg.FailInterval)
 			fmt.Println()
 			time.Sleep(time.Duration(cfg.FailInterval) * time.Millisecond)
 			continue
@@ -186,7 +189,7 @@ func (e *Engine) run(ctx context.Context, task TaskInterface) error {
 		if cfg.SuccessInterval < 0 {
 			return nil
 		}
-		e.log.Infof("Executed successfully, will continue after %dms", cfg.SuccessInterval)
+		e.log.Infof("[%s] Executed successfully, will continue after %dms", e.cfg.Name, cfg.SuccessInterval)
 		time.Sleep(time.Duration(cfg.SuccessInterval) * time.Millisecond)
 	}
 }
