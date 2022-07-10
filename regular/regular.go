@@ -109,7 +109,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 	ticker := time.NewTicker(time.Minute)
 	for {
 		if e.cancel == nil {
-			e.log.Infof("[%s] Start mission reconnaissance", e.cfg.Name)
+			e.log.Debugf("[%s] Start mission reconnaissance", e.cfg.Name)
 		}
 		now := time.Now()
 		hour := now.Hour()
@@ -143,7 +143,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 					if err := e.run(ctx, task); err != nil {
 						e.log.Errorf("[%s] Execution ends with error: %v", e.cfg.Name, err)
 					}
-					e.log.Info("[%s] The execution of the current time period is over, please wait for the next time period", e.cfg.Name)
+					e.log.Debugf("[%s] The execution of the current time period is over, please wait for the next time period", e.cfg.Name)
 				}()
 				break
 			}
@@ -158,7 +158,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 			if e.cancel != nil {
 				e.cancel()
 			}
-			e.log.Info("[%s] task stopped", e.cfg.Name)
+			e.log.Debugf("[%s] task stopped", e.cfg.Name)
 			return nil
 		case <-ticker.C:
 		}
@@ -189,7 +189,7 @@ func (e *Engine) run(ctx context.Context, task TaskInterface) error {
 		if cfg.SuccessInterval < 0 {
 			return nil
 		}
-		e.log.Infof("[%s] Executed successfully, will continue after %dms", e.cfg.Name, cfg.SuccessInterval)
+		e.log.Debugf("[%s] Executed successfully, will continue after %dms", e.cfg.Name, cfg.SuccessInterval)
 		time.Sleep(time.Duration(cfg.SuccessInterval) * time.Millisecond)
 	}
 }
