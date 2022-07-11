@@ -134,7 +134,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 				}()
 				break
 			}
-			if start && end && e.cancel != nil {
+			if end && e.cancel != nil {
 				e.cancel()
 				e.cancel = nil
 			}
