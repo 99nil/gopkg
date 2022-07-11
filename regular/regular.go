@@ -120,20 +120,7 @@ func (e *Engine) Start(ctx context.Context, task TaskInterface) error {
 				continue
 			}
 
-			start, end := false, false
-			if v.startHour < hour {
-				start = true
-			}
-			if v.startHour == hour && v.startMinute <= minute {
-				start = true
-			}
-			if v.endHour < hour {
-				end = true
-			}
-			if v.endHour == hour && v.endMinute <= minute {
-				end = true
-			}
-
+			start, end := CheckTime(v.startHour, v.startMinute, v.endHour, v.endMinute, hour, minute)
 			if start && !end && currentStartHour != v.startHour {
 				currentStartHour = v.startHour
 				currentStartMinute = v.startMinute
@@ -192,4 +179,32 @@ func (e *Engine) run(ctx context.Context, task TaskInterface) error {
 		e.log.Debugf("[%s] Executed successfully, will continue after %dms", e.cfg.Name, cfg.SuccessInterval)
 		time.Sleep(time.Duration(cfg.SuccessInterval) * time.Millisecond)
 	}
+}
+
+func CheckTime(startHour, startMinute, endHour, endMinute, currentHour, currentMinute int) (start bool, end bool) {
+	startTime := time.Date(0, 0, 0, startHour, startMinute, 0, 0, time.Local)
+	endTime := time.Date(0, 0, 0, endHour, endMinute, 0, 0, time.Local)
+	currentTime := time.Date(0, 0, 0, currentHour, currentMinute, 0, 0, time.Local)
+
+	since := startTime.Sub(endTime)
+	if since == 0 {
+		start = true
+		return
+	} else if since < 0 {
+		if currentTime.Sub(startTime) >= 0 {
+			start = true
+		}
+		if currentTime.Sub(endTime) >= 0 {
+			end = true
+		}
+	} else {
+		if currentTime.Sub(endTime) >= 0 {
+			end = true
+		}
+		if currentTime.Sub(startTime) >= 0 || !end {
+			start = true
+			end = false
+		}
+	}
+	return
 }

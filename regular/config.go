@@ -17,8 +17,7 @@ package regular
 import "time"
 
 var (
-	AllDay = Period{Start: "00:00", End: "23:59"}
-	NoDay  = Period{Start: "00:00", End: "00:00"}
+	AllDay = Period{Start: "00:00", End: "00:00"}
 )
 
 func NewDefaultConfig() *Config {
