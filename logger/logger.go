@@ -96,17 +96,21 @@ type DebugInterface interface {
 	Debugln(v ...interface{})
 }
 
-func NewEmpty() Interface {
+func NewEmpty() FieldInterface {
 	return NewEmptyWithStd(NewStdEmpty())
 }
 
-func NewEmptyWithStd(std StdInterface) Interface {
+func NewEmptyWithStd(std StdInterface) FieldInterface {
 	return &empty{std: std}
 }
 
 type empty struct {
 	std StdInterface
 }
+
+func (l *empty) WithField(key string, val interface{}) FieldInterface { return l }
+
+func (l *empty) WithFields(fields map[string]interface{}) FieldInterface { return l }
 
 func (l *empty) Info(v ...interface{})                 { l.std.Print(v...) }
 func (l *empty) Infof(format string, v ...interface{}) { l.std.Printf(format, v...) }

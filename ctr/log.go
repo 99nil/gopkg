@@ -19,7 +19,7 @@ import (
 )
 
 // logInstance defines the log processing method
-var logInstance = logger.NewEmpty()
+var logInstance logger.Interface = logger.NewEmpty()
 
 // Logger returns the default logger instance
 func Logger() logger.Interface {
