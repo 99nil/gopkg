@@ -1,6 +1,6 @@
 module github.com/99nil/gopkg
 
-go 1.17
+go 1.19
 
 require (
 	github.com/mitchellh/go-homedir v1.1.0
