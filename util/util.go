@@ -15,9 +15,22 @@
 package util
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"unsafe"
 )
+
+// GetModulePath ets the path of the project containing go.mod upwards from the current directory.
+func GetModulePath(dir string) (string, error) {
+	modPath := filepath.Join(dir, "go.mod")
+	_, err := os.Stat(modPath)
+	if err != nil {
+		dir = filepath.Dir(dir)
+		return GetModulePath(dir)
+	}
+	return dir, nil
+}
 
 // UnsafeToBytes converts string to a byte slice without memory allocation.
 //
