@@ -32,27 +32,33 @@ func ParseConfig(configPath string, data interface{}) error {
 // You can customize your judgment according by `err.(*os.PathError)`
 // You can get the configuration file path by `viper.ConfigFileUsed()`
 func ParseConfigWithEnv(configPath string, data interface{}, envPrefix string) error {
+	_, err := ParseConfigWithEnvAlone(configPath, data, envPrefix)
+	return err
+}
+
+func ParseConfigWithEnvAlone(configPath string, data interface{}, envPrefix string) (*viper.Viper, error) {
+	v := viper.New()
 	if configPath != "" {
-		viper.SetConfigFile(configPath)
+		v.SetConfigFile(configPath)
 	} else {
 		home, err := homedir.Dir()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		viper.AddConfigPath(home)
-		viper.SetConfigName("config.yaml")
+		v.AddConfigPath(home)
+		v.SetConfigName("config.yaml")
 	}
 	if envPrefix != "" {
-		viper.SetEnvPrefix(envPrefix)
-		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-		viper.AutomaticEnv()
+		v.SetEnvPrefix(envPrefix)
+		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+		v.AutomaticEnv()
 	}
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(*os.PathError); !ok {
-			return err
+			return v, err
 		}
 	}
-	return viper.Unmarshal(data, func(dc *mapstructure.DecoderConfig) {
+	return v, v.Unmarshal(data, func(dc *mapstructure.DecoderConfig) {
 		dc.TagName = "json"
 	})
 }
