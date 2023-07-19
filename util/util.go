@@ -15,6 +15,7 @@
 package util
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,6 +28,9 @@ func GetModulePath(dir string) (string, error) {
 	_, err := os.Stat(modPath)
 	if err != nil {
 		dir = filepath.Dir(dir)
+		if dir == "/" || dir == "." {
+			return "", errors.New("unavailable dir")
+		}
 		return GetModulePath(dir)
 	}
 	return dir, nil
