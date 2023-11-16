@@ -18,21 +18,19 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 
+	"github.com/99nil/gopkg/signals"
 	"golang.org/x/net/http2"
+	"golang.org/x/sync/errgroup"
 )
 
 const DefaultPort = 9090
 
 type Config struct {
-	Host   string `json:"host" yaml:"host"`
-	Port   int    `json:"port" yaml:"port"`
-	Secret string `json:"secret" yaml:"secret"`
+	Host string `json:"host" yaml:"host"`
+	Port int    `json:"port" yaml:"port"`
 }
 
 type Server struct {
@@ -44,7 +42,13 @@ func New(cfg *Config) *Server {
 	if cfg.Port > 0 {
 		port = cfg.Port
 	}
-	addr := ":" + strconv.Itoa(port)
+
+	var addr string
+	if len(cfg.Host) > 0 {
+		addr += cfg.Host
+	}
+	addr += ":" + strconv.Itoa(port)
+
 	server := &http.Server{
 		Addr:           addr,
 		ReadTimeout:    20 * time.Second,
@@ -66,22 +70,35 @@ func (s *Server) Run(ctx context.Context) error {
 	return s.ListenAndServe()
 }
 
+func (s *Server) RunAndStop(ctx context.Context) error {
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error { return signals.Exit(ctx) })
+	eg.Go(func() error { return s.Run(ctx) })
+	eg.Go(func() error { return WaitForShutdown(ctx, s.Server, 0) })
+	return eg.Wait()
+}
+
 func (s *Server) RunTLS(ctx context.Context) error {
 	return s.ListenAndServeTLS("", "")
 }
 
-func (s *Server) ShutdownGraceful(ctx context.Context) error {
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
+func (s *Server) RunTLSAndStop(ctx context.Context) error {
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error { return signals.Exit(ctx) })
+	eg.Go(func() error { return s.RunTLS(ctx) })
+	eg.Go(func() error { return WaitForShutdown(ctx, s.Server, 0) })
+	return eg.Wait()
+}
 
-	select {
-	case <-ctx.Done():
-	case <-ch:
+func WaitForShutdown(ctx context.Context, srv *http.Server, timeout time.Duration) error {
+	<-ctx.Done()
+
+	if timeout <= 0 {
+		timeout = time.Second * 5
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	if err := s.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(timeoutCtx); err != nil {
 		return fmt.Errorf("server shutdown failed: %v", err)
 	}
 	return nil

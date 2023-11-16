@@ -16,6 +16,7 @@ package util
 
 import (
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -57,4 +58,40 @@ func UnsafeToBytes(s string) []byte {
 // in the future go versions.
 func UnsafeToString(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
+}
+
+// GetLocalIP returns the local IP
+func GetLocalIP() (net.IP, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil, err
+	}
+	for _, address := range addrs {
+		// Check if the IP is a loopback address.
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP, nil
+			}
+		}
+	}
+	return nil, errors.New("local ip not found")
+}
+
+// IsLocalIP checks whether the IP address is local
+func IsLocalIP(ip string) (bool, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return false, err
+	}
+
+	for i := range addrs {
+		intf, _, err := net.ParseCIDR(addrs[i].String())
+		if err != nil {
+			return false, err
+		}
+		if net.ParseIP(ip).Equal(intf) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

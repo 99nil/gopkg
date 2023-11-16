@@ -1,4 +1,4 @@
-// Copyright © 2021 zc2638 <zc2638@qq.com>.
+// Copyright © 2023 zc2638 <zc2638@qq.com>.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,30 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ctr
+package signals
 
-type Log interface {
-	Error(v ...interface{})
-}
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+)
 
-type emptyLogger struct{}
-
-func (l *emptyLogger) Error(v ...interface{}) {}
-
-// logInstance defines the log processing method
-var logger Log = new(emptyLogger)
-
-// Logger returns the default logger instance
-func Logger() Log {
-	return logger
-}
-
-func SetLog(l Log) {
-	if l != nil {
-		logger = l
+func Exit(ctx context.Context, sigs ...os.Signal) error {
+	if len(sigs) == 0 {
+		sigs = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT}
 	}
-}
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, sigs...)
 
-// InitLogger initialization the log processing method
-// Deprecated: SetLog instead.
-var InitLogger = SetLog
+	select {
+	case <-ctx.Done():
+	case s := <-ch:
+		return fmt.Errorf("exit by signal: %v", s)
+	}
+	return nil
+}

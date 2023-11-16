@@ -16,18 +16,14 @@ package ctr
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
-
-// Success writes ok message to the response.
-func Success(w http.ResponseWriter) {
-	Str(w, "success")
-}
 
 // Bytes writes the Bytes message to the response.
 func Bytes(w http.ResponseWriter, bytes []byte) {
 	w.WriteHeader(http.StatusOK)
-	w.Write(bytes)
+	_, _ = w.Write(bytes)
 }
 
 // Str writes the string message to the response.
@@ -35,9 +31,9 @@ func Str(w http.ResponseWriter, str string) {
 	Bytes(w, []byte(str))
 }
 
-// OK writes the json-encoded data to the response.
-func OK(w http.ResponseWriter, v interface{}) {
-	JSON(w, v, http.StatusOK)
+// Success writes ok message to the response.
+func Success(w http.ResponseWriter) {
+	Str(w, "success")
 }
 
 // NoContent writes no content to the response.
@@ -55,57 +51,72 @@ func Found(w http.ResponseWriter, r *http.Request, url string) {
 	Redirect(w, r, url, http.StatusFound)
 }
 
-// ErrorCode writes the json-encoded error message to the response.
-func ErrorCode(w http.ResponseWriter, err error, status int) {
-	if err == nil {
-		w.WriteHeader(status)
-		return
-	}
-	Logger().Errorln(err)
-	JSON(w, err.Error(), status)
-}
-
-// InternalError writes the json-encoded error message to the response
-// with a 500 internal server error.
-func InternalError(w http.ResponseWriter, err error) {
-	ErrorCode(w, err, http.StatusInternalServerError)
-}
-
-// NotImplemented writes the json-encoded error message to the
-// response with a 501 not found status code.
-func NotImplemented(w http.ResponseWriter, err error) {
-	ErrorCode(w, err, http.StatusNotImplemented)
-}
-
-// NotFound writes the json-encoded error message to the response
-// with a 404 not found status code.
-func NotFound(w http.ResponseWriter, err error) {
-	ErrorCode(w, err, http.StatusNotFound)
-}
-
-// Unauthorized writes the json-encoded error message to the response
-// with a 401 unauthorized status code.
-func Unauthorized(w http.ResponseWriter, err error) {
-	ErrorCode(w, err, http.StatusUnauthorized)
-}
-
-// Forbidden writes the json-encoded error message to the response
-// with a 403 forbidden status code.
-func Forbidden(w http.ResponseWriter, err error) {
-	ErrorCode(w, err, http.StatusForbidden)
-}
-
-// BadRequest writes the json-encoded error message to the response
-// with a 400 bad request status code.
-func BadRequest(w http.ResponseWriter, err error) {
-	ErrorCode(w, err, http.StatusBadRequest)
-}
-
 // JSON writes the json-encoded error message to the response
 // with a 400 bad request status code.
 func JSON(w http.ResponseWriter, v interface{}, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
-	enc.Encode(v)
+	_ = enc.Encode(v)
+}
+
+// OK writes the json-encoded data to the response.
+func OK(w http.ResponseWriter, v interface{}) {
+	JSON(w, v, http.StatusOK)
+}
+
+// ErrorCode writes the json-encoded error message to the response.
+func ErrorCode(w http.ResponseWriter, status int, v ...any) {
+	var err error
+	if len(v) > 0 {
+		switch vv := v[0].(type) {
+		case error:
+			err = vv
+		case string:
+			err = errors.New(vv)
+		}
+	}
+	if err == nil {
+		w.WriteHeader(status)
+		return
+	}
+
+	logger.Error(err)
+	JSON(w, err.Error(), status)
+}
+
+// InternalError writes the json-encoded error message to the response
+// with a 500 internal server error.
+func InternalError(w http.ResponseWriter, err error) {
+	ErrorCode(w, http.StatusInternalServerError, err)
+}
+
+// NotImplemented writes the json-encoded error message to the
+// response with a 501 not found status code.
+func NotImplemented(w http.ResponseWriter, err error) {
+	ErrorCode(w, http.StatusNotImplemented, err)
+}
+
+// NotFound writes the json-encoded error message to the response
+// with a 404 not found status code.
+func NotFound(w http.ResponseWriter, err error) {
+	ErrorCode(w, http.StatusNotFound, err)
+}
+
+// Unauthorized writes the json-encoded error message to the response
+// with a 401 unauthorized status code.
+func Unauthorized(w http.ResponseWriter, err error) {
+	ErrorCode(w, http.StatusUnauthorized, err)
+}
+
+// Forbidden writes the json-encoded error message to the response
+// with a 403 forbidden status code.
+func Forbidden(w http.ResponseWriter, err error) {
+	ErrorCode(w, http.StatusForbidden, err)
+}
+
+// BadRequest writes the json-encoded error message to the response
+// with a 400 bad request status code.
+func BadRequest(w http.ResponseWriter, err error) {
+	ErrorCode(w, http.StatusBadRequest, err)
 }
