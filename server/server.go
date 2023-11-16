@@ -38,6 +38,10 @@ type Server struct {
 }
 
 func New(cfg *Config) *Server {
+	if cfg == nil {
+		cfg = new(Config)
+	}
+
 	port := DefaultPort
 	if cfg.Port > 0 {
 		port = cfg.Port
