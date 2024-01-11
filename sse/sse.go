@@ -36,8 +36,45 @@ type Message struct {
 	ID      string
 	Data    string
 	Event   string
-	Retry   string
+	Retry   string // ms
 	Comment string
+}
+
+func (m *Message) IsCloseMsg() bool {
+	return m.Event == "error" && m.Data == "eof"
+}
+
+func (m *Message) String() string {
+	var sb strings.Builder
+
+	if m.ID != "" {
+		sb.WriteString("id: ")
+		sb.WriteString(m.ID)
+		sb.WriteString("\n")
+	}
+	if m.Event != "" {
+		sb.WriteString("event: ")
+		sb.WriteString(m.Event)
+		sb.WriteString("\n")
+	}
+	if m.Data != "" {
+		sb.WriteString("data: ")
+		sb.WriteString(m.Data)
+		sb.WriteString("\n")
+	}
+	if m.Retry != "" {
+		sb.WriteString("retry: ")
+		sb.WriteString(m.Retry)
+		sb.WriteString("\n")
+	}
+	if m.Comment != "" {
+		sb.WriteString(": ")
+		sb.WriteString(m.Comment)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+	return sb.String()
 }
 
 type Parser struct {
