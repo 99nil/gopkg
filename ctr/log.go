@@ -14,13 +14,11 @@
 
 package ctr
 
+import "fmt"
+
 type Log interface {
-	Error(v ...interface{})
+	Error(vs ...any)
 }
-
-type emptyLogger struct{}
-
-func (l *emptyLogger) Error(v ...interface{}) {}
 
 // logInstance defines the log processing method
 var logger Log = new(emptyLogger)
@@ -39,3 +37,29 @@ func SetLog(l Log) {
 // InitLogger initialization the log processing method
 // Deprecated: SetLog instead.
 var InitLogger = SetLog
+
+type emptyLogger struct{}
+
+func (l *emptyLogger) Error(vs ...any) {}
+
+func CoverKVLog(logger KVLog) Log {
+	return &coverLog{logger: logger}
+}
+
+type KVLog interface {
+	Error(msg string, vs ...any)
+}
+
+type coverLog struct {
+	logger KVLog
+}
+
+func (l *coverLog) Error(vs ...any) {
+	for _, v := range vs {
+		str, ok := v.(string)
+		if !ok {
+			str = fmt.Sprintf("%v", v)
+		}
+		l.logger.Error(str)
+	}
+}

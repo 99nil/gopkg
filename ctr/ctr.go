@@ -16,6 +16,7 @@ package ctr
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -52,7 +53,7 @@ func Found(w http.ResponseWriter, r *http.Request, url string) {
 
 // JSON writes the json-encoded error message to the response
 // with a 400 bad request status code.
-func JSON(w http.ResponseWriter, v interface{}, status int) {
+func JSON(w http.ResponseWriter, v any, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
@@ -60,7 +61,7 @@ func JSON(w http.ResponseWriter, v interface{}, status int) {
 }
 
 // OK writes the json-encoded data to the response.
-func OK(w http.ResponseWriter, v interface{}) {
+func OK(w http.ResponseWriter, v any) {
 	JSON(w, v, http.StatusOK)
 }
 
@@ -68,7 +69,16 @@ func OK(w http.ResponseWriter, v interface{}) {
 func ErrorCode(w http.ResponseWriter, status int, v ...any) {
 	var errStr string
 	if len(v) > 0 {
-		switch vv := v[0].(type) {
+		ev := v[0]
+		if hookError != nil {
+			switch vv := ev.(type) {
+			case error:
+				ev = hookError(vv)
+			case string:
+				ev = hookError(errors.New(vv))
+			}
+		}
+		switch vv := ev.(type) {
 		case error:
 			errStr = vv.Error()
 		case string:
