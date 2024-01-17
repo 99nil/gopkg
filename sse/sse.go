@@ -20,7 +20,9 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -32,16 +34,18 @@ const (
 
 const defaultBufferSize = 4096
 
+var CloseMessage = &Message{Data: io.EOF.Error(), Event: "error"}
+
 type Message struct {
 	ID      string
 	Data    string
 	Event   string
-	Retry   string // ms
+	Retry   time.Duration // ms
 	Comment string
 }
 
-func (m *Message) IsCloseMsg() bool {
-	return m.Event == "error" && m.Data == "eof"
+func (m *Message) IsClose() bool {
+	return m.Event == "error" && m.Data == io.EOF.Error()
 }
 
 func (m *Message) String() string {
@@ -62,9 +66,9 @@ func (m *Message) String() string {
 		sb.WriteString(m.Data)
 		sb.WriteString("\n")
 	}
-	if m.Retry != "" {
+	if m.Retry > 0 {
 		sb.WriteString("retry: ")
-		sb.WriteString(m.Retry)
+		sb.WriteString(strconv.FormatInt(m.Retry.Milliseconds(), 10))
 		sb.WriteString("\n")
 	}
 	if m.Comment != "" {
@@ -99,19 +103,19 @@ func NewParser(r io.Reader) *Parser {
 	return &Parser{scanner: scanner}
 }
 
-func (p *Parser) ReadEventLoop(callback func(event *Message, err error) error) error {
+func (p *Parser) ReadLoop(callback func(event *Message, err error) error) error {
 	if callback == nil {
 		return errors.New("callback must be defined")
 	}
 	for {
-		message, err := p.ReadMessage()
+		message, err := p.Read()
 		if err := callback(message, err); err != nil {
 			return err
 		}
 	}
 }
 
-func (p *Parser) ReadMessage() (*Message, error) {
+func (p *Parser) Read() (*Message, error) {
 	scanner := p.scanner
 	if scanner.Scan() {
 		msg := scanner.Text()
@@ -120,7 +124,7 @@ func (p *Parser) ReadMessage() (*Message, error) {
 		}
 		return processEventMsg(msg), nil
 	}
-	if err := scanner.Err(); !errors.Is(err, context.Canceled) {
+	if err := scanner.Err(); err != nil && !errors.Is(err, context.Canceled) {
 		return nil, err
 	}
 	return nil, io.EOF
@@ -145,7 +149,9 @@ func processEventMsg(msg string) *Message {
 		case strings.HasPrefix(line, headerEvent):
 			message.Event = trimPrefix(line, headerEvent)
 		case strings.HasPrefix(line, headerRetry):
-			message.Retry = trimPrefix(line, headerRetry)
+			v := trimPrefix(line, headerRetry)
+			d, _ := strconv.ParseInt(v, 10, 64)
+			message.Retry = time.Duration(d) * time.Millisecond
 		default:
 		}
 	}
