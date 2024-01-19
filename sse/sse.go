@@ -26,6 +26,11 @@ import (
 )
 
 const (
+	EventMessage = "message"
+	EventError   = "error"
+)
+
+const (
 	headerID    = "id:"
 	headerData  = "data:"
 	headerEvent = "event:"
@@ -34,7 +39,7 @@ const (
 
 const defaultBufferSize = 4096
 
-var CloseMessage = &Message{Data: io.EOF.Error(), Event: "error"}
+var CloseMessage = &Message{Data: io.EOF.Error(), Event: EventError}
 
 type Message struct {
 	ID      string
@@ -45,7 +50,7 @@ type Message struct {
 }
 
 func (m *Message) IsClose() bool {
-	return m.Event == "error" && m.Data == io.EOF.Error()
+	return m.Event == EventError && m.Data == io.EOF.Error()
 }
 
 func (m *Message) String() string {
@@ -77,7 +82,9 @@ func (m *Message) String() string {
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString("\n")
+	if sb.Len() > 0 {
+		sb.WriteString("\n")
+	}
 	return sb.String()
 }
 

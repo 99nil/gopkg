@@ -39,7 +39,7 @@ func NewReceiver[T any](reader io.Reader, coverFn func(data []byte) (T, bool), o
 		runCh:     make(chan struct{}),
 		parser:    NewParser(reader),
 		coverFn:   coverFn,
-		dataEvent: "message",
+		dataEvent: EventMessage,
 	}
 	for _, opt := range opts {
 		switch v := opt.(type) {
@@ -93,7 +93,7 @@ func (r *Receiver[T]) Run(ctx context.Context) {
 			return err
 		}
 
-		if message.Event == "error" {
+		if message.Event == EventError {
 			if strings.ToUpper(message.Data) == io.EOF.Error() {
 				return io.EOF
 			}

@@ -41,14 +41,13 @@ func NewSender(w http.ResponseWriter, opts ...any) (*Sender, error) {
 	h.Set("Content-Type", "text/event-stream")
 	h.Set("Cache-Control", "no-cache")
 	h.Set("Connection", "keep-alive")
+	h.Set("X-Accel-Buffering", "no")
 
 	for _, opt := range opts {
 		switch v := opt.(type) {
 		case Buffered:
 			if v {
 				h.Set("X-Accel-Buffering", "yes")
-			} else {
-				h.Set("X-Accel-Buffering", "no")
 			}
 		}
 	}
@@ -97,7 +96,7 @@ func (s *Sender) SendError(v any) {
 		return
 	}
 
-	m := &Message{Event: "error"}
+	m := &Message{Event: EventError}
 	switch vv := v.(type) {
 	case string:
 		m.Data = vv
@@ -260,5 +259,5 @@ func sendCoverFunc(data any) ([]*Message, error) {
 	if data == "" {
 		return nil, nil
 	}
-	return []*Message{{Event: "message", Data: dataStr}}, nil
+	return []*Message{{Event: EventMessage, Data: dataStr}}, nil
 }
