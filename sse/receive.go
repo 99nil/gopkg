@@ -22,7 +22,9 @@ import (
 	"strings"
 )
 
-func NewReceiver[T any](reader io.Reader, coverFn func(data []byte) (T, bool)) *Receiver[T] {
+type ReceiveDataEvent string
+
+func NewReceiver[T any](reader io.Reader, coverFn func(data []byte) (T, bool), opts ...any) *Receiver[T] {
 	if coverFn == nil {
 		coverFn = func(data []byte) (T, bool) {
 			var out T
@@ -30,13 +32,22 @@ func NewReceiver[T any](reader io.Reader, coverFn func(data []byte) (T, bool)) *
 			return out, err == nil
 		}
 	}
-	return &Receiver[T]{
-		dataCh:  make(chan T),
-		errCh:   make(chan error),
-		runCh:   make(chan struct{}),
-		parser:  NewParser(reader),
-		coverFn: coverFn,
+
+	r := &Receiver[T]{
+		dataCh:    make(chan T),
+		errCh:     make(chan error),
+		runCh:     make(chan struct{}),
+		parser:    NewParser(reader),
+		coverFn:   coverFn,
+		dataEvent: "message",
 	}
+	for _, opt := range opts {
+		switch v := opt.(type) {
+		case ReceiveDataEvent:
+			r.dataEvent = string(v)
+		}
+	}
+	return r
 }
 
 type Receiver[T any] struct {
@@ -44,8 +55,9 @@ type Receiver[T any] struct {
 	errCh  chan error
 	runCh  chan struct{}
 
-	parser  *Parser
-	coverFn func(data []byte) (T, bool)
+	parser    *Parser
+	coverFn   func(data []byte) (T, bool)
+	dataEvent string
 }
 
 func (r *Receiver[T]) IsClosed() bool {
@@ -88,7 +100,7 @@ func (r *Receiver[T]) Run(ctx context.Context) {
 			r.errCh <- errors.New(message.Data)
 			return nil
 		}
-		if message.Event != "data" {
+		if message.Event != r.dataEvent {
 			return nil
 		}
 
