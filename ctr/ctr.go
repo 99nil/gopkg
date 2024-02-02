@@ -23,7 +23,9 @@ import (
 // Bytes writes the Bytes message to the response.
 func Bytes(w http.ResponseWriter, bytes []byte) {
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(bytes)
+	if bytes != nil {
+		_, _ = w.Write(bytes)
+	}
 }
 
 // Str writes the string message to the response.
@@ -56,8 +58,9 @@ func Found(w http.ResponseWriter, r *http.Request, url string) {
 func JSON(w http.ResponseWriter, v any, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	enc := json.NewEncoder(w)
-	_ = enc.Encode(v)
+	if v != nil {
+		_ = json.NewEncoder(w).Encode(v)
+	}
 }
 
 // OK writes the json-encoded data to the response.
