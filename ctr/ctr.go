@@ -16,7 +16,6 @@ package ctr
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 )
 
@@ -74,12 +73,7 @@ func ErrorCode(w http.ResponseWriter, status int, v ...any) {
 	if len(v) > 0 {
 		ev := v[0]
 		if hookError != nil {
-			switch vv := ev.(type) {
-			case error:
-				ev = hookError(vv)
-			case string:
-				ev = hookError(errors.New(vv))
-			}
+			ev = hookError(v...)
 		}
 		switch vv := ev.(type) {
 		case error:

@@ -14,8 +14,8 @@
 
 package ctr
 
-var hookError func(error) any
+var hookError func(vs ...any) any
 
-func HookError(hook func(error) any) {
+func HookError(hook func(vs ...any) any) {
 	hookError = hook
 }
