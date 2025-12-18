@@ -71,10 +71,7 @@ func OK(w http.ResponseWriter, v any) {
 func ErrorCode(w http.ResponseWriter, status int, v ...any) {
 	var errStr string
 	if len(v) > 0 {
-		ev := v[0]
-		if hookError != nil {
-			ev = hookError(v...)
-		}
+		ev := RunHookError(v...)
 		switch vv := ev.(type) {
 		case error:
 			errStr = vv.Error()

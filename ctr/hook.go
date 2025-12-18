@@ -19,3 +19,13 @@ var hookError func(vs ...any) any
 func HookError(hook func(vs ...any) any) {
 	hookError = hook
 }
+
+func RunHookError(vs ...any) any {
+	if hookError != nil {
+		return hookError(vs...)
+	}
+	if len(vs) > 0 {
+		return vs[0]
+	}
+	return nil
+}
